@@ -1,0 +1,50 @@
+version: "3.9"
+ 
+services:
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+ 
+  python_api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DEVICE=cpu
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+ 
+  node_server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/quantumdino
+      - PYTHON_API_URL=http://python_api:8000
+    depends_on:
+      - mongodb
+      - python_api
+ 
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - node_server
+ 
+volumes:
+  mongo_data:
+  hf_cache:
